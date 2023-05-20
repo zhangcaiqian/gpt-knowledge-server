@@ -2,27 +2,27 @@ import os
 
 from langchain import OpenAI
 from llama_index import (GPTSimpleVectorIndex, LLMPredictor, PromptHelper,
-                         SimpleDirectoryReader)
+                         SimpleDirectoryReader, download_loader)
 
 from . import llm_service
 
 llm_predictor, prompt_helper = llm_service.gen_llm()
 
-# NOTE: for local testing only, do NOT deploy with your key hardcoded
-os.environ['OPENAI_API_KEY'] = "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"
+PDFReader = download_loader("PDFReader")
 
 index = None
 
 def load_index_from_disk(index_name):
     global index
-    if os.path.exists(index_name):
-        index = GPTSimpleVectorIndex.load_from_disk(index_name, llm_predictor=llm_predictor, prompt_helper=prompt_helper)
+    if os.path.exists(os.path.join("../file_index", index_name + ".json")):
+        index = GPTSimpleVectorIndex.load_from_disk(os.path.join("/file_index", index_name + ".json"), llm_predictor=llm_predictor, prompt_helper=prompt_helper)
     else:
-        documents = SimpleDirectoryReader("./documents").load_data()
+        # documents = SimpleDirectoryReader("./documents").load_data()
+        loader = PDFReader()
+        documents = loader.load_data(file=os.path.join("../documents", index_name + ".pdf"))
         index = GPTSimpleVectorIndex(documents, llm_predictor=llm_predictor, prompt_helper=prompt_helper)
         index.save_to_disk(index_name)
     return index
-
 
 
 def initialize_index():
