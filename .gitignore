@@ -13,7 +13,7 @@ dist/
 build/
 *.egg-info/
 
-*.json
 
 documents
 uploads
+test_index.json

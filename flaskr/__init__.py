@@ -4,7 +4,7 @@ import threading
 from flask import Flask, request
 from flask_socketio import SocketIO, emit
 
-from . import file_service, index_service
+from . import file_service, index_service, utils
 
 
 def create_app(test_config=None):
@@ -12,7 +12,8 @@ def create_app(test_config=None):
     app = Flask(__name__, instance_relative_config=True)
 
     app.config['UPLOAD_FOLDER'] = './documents'
-    app.config['MAX_CONTENT_LENGTH'] = 16 * 1000 * 1000
+    app.config['INDEX_FILE_FOLDER'] = './file_index'
+    app.config['MAX_CONTENT_LENGTH'] = 100 * 1000 * 1000
 
     app.config.from_mapping(
         SECRET_KEY='dev',
@@ -51,32 +52,55 @@ def create_app(test_config=None):
             return "No index found, please include a ?index=blah parameter in the URL", 400
         index = index_service.load_index_from_disk(query_index_name)
         response = index.query(query_text)
-        return str(response), 200
+        return utils.resp_format(data={'answer': str(response)}, msg='success')
     
-    @app.route('/', methods=['GET', 'POST'])
-    def upload_file_handler():
-        res = file_service.upload(app=app)
-        return res
+    @app.route('/', methods=['GET'])
+    def home():
+        return '首页'
     
     @app.route('/upload', methods=['POST'])
     def handle_upload():
+        if 'file' not in request.files:
+            return utils.resp_format(msg='No file part', code=400)
         # 获取文件名和保存路径
         file = request.files['file']
+        if file.filename == '':
+            return utils.resp_format(msg='No selected file', code=400)
+        
+        if not file_service.allowed_file(file.filename):
+            return utils.resp_format(msg='File type not allowed', code=400)
+        
         filename = file.filename
         save_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
 
         # 创建新线程上传文件
         t = threading.Thread(target=upload_file, args=(file, save_path))
         t.start()
+        t.join()
+        # 生成文件向量索引
+        msg = index_service.gen_index_with_pdf(file.filename)
 
-        return 'OK'
+        return utils.resp_format(msg='success',data={'file': filename, 'vector': msg})
 
     def upload_file(file, save_path):
         # 保存文件
         file.save(save_path)
+        # 生成文件向量索引
+        index_service.gen_index_with_pdf(file.filename)
 
         # 向客户端发送上传完成消息
         socketio.emit('upload_complete', {'filename': save_path})
+    
+    @app.route('/files')
+    def list_files():
+        # 获取目录路径
+        dir_path = app.config['INDEX_FILE_FOLDER']
+
+        # 获取目录下所有文件名
+        files = [f for f in os.listdir(dir_path) if os.path.isfile(os.path.join(dir_path, f))]
+
+        # 返回文件列表
+        return utils.resp_format(data={'files': files}, msg='success')
 
     return app
 

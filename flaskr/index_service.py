@@ -14,15 +14,24 @@ index = None
 
 def load_index_from_disk(index_name):
     global index
-    if os.path.exists(os.path.join("../file_index", index_name + ".json")):
-        index = GPTSimpleVectorIndex.load_from_disk(os.path.join("/file_index", index_name + ".json"), llm_predictor=llm_predictor, prompt_helper=prompt_helper)
+    if os.path.exists("./file_index/" + index_name + ".json"):
+        index = GPTSimpleVectorIndex.load_from_disk(os.path.join("./file_index", index_name + ".json"), llm_predictor=llm_predictor, prompt_helper=prompt_helper)
     else:
-        # documents = SimpleDirectoryReader("./documents").load_data()
         loader = PDFReader()
-        documents = loader.load_data(file=os.path.join("../documents", index_name + ".pdf"))
+        documents = loader.load_data(file=os.path.join("./documents", index_name + ".pdf"))
         index = GPTSimpleVectorIndex(documents, llm_predictor=llm_predictor, prompt_helper=prompt_helper)
         index.save_to_disk(index_name)
     return index
+
+def gen_index_with_pdf(index_name):
+    if os.path.exists("./file_index/" + index_name + ".json"):
+        return 'index has already exists'
+    else:
+        loader = PDFReader()
+        documents = loader.load_data(file=os.path.join("./documents", index_name + ".pdf"))
+        index = GPTSimpleVectorIndex(documents, llm_predictor=llm_predictor, prompt_helper=prompt_helper)
+        index.save_to_disk(os.path.join("./file_index", index_name))
+        return 'index has been generated'
 
 
 def initialize_index():

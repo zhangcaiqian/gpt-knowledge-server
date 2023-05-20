@@ -4,7 +4,7 @@ from langchain import OpenAI
 from llama_index import LLMPredictor, PromptHelper
 
 # NOTE: for local testing only, do NOT deploy with your key hardcoded
-os.environ['OPENAI_API_KEY'] = "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"
+os.environ['OPENAI_API_KEY'] = "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"
 
 
 def gen_llm(model_name="text-davinci-003"):
