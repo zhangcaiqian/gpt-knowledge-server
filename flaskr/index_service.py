@@ -4,7 +4,7 @@ from langchain import OpenAI
 from llama_index import (GPTSimpleVectorIndex, LLMPredictor, PromptHelper,
                          SimpleDirectoryReader, download_loader)
 
-from . import llm_service
+from . import llm_service, utils
 
 llm_predictor, prompt_helper = llm_service.gen_llm()
 
@@ -24,13 +24,14 @@ def load_index_from_disk(index_name):
     return index
 
 def gen_index_with_pdf(index_name):
-    if os.path.exists("./file_index/" + index_name + ".json"):
+    file_name = utils.get_name_without_suffix(index_name)
+    if os.path.exists("./file_index/" + file_name + ".json"):
         return 'index has already exists'
     else:
         loader = PDFReader()
-        documents = loader.load_data(file=os.path.join("./documents", index_name + ".pdf"))
+        documents = loader.load_data(file=os.path.join("./documents", file_name + ".pdf"))
         index = GPTSimpleVectorIndex(documents, llm_predictor=llm_predictor, prompt_helper=prompt_helper)
-        index.save_to_disk(os.path.join("./file_index", index_name))
+        index.save_to_disk(os.path.join("./file_index", file_name))
         return 'index has been generated'
 
 
